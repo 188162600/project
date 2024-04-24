@@ -1,7 +1,7 @@
 
    # Import everything from question 1
 from core1 import *
-
+# dbwbduw
 def main():
          # Constants and initial conditions
     G = 6.67430e-11  # Gravitational constant
