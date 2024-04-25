@@ -732,7 +732,7 @@ def main_accurate():
    
 def main():
     main_speed()
-    main_accurate()
+    # main_accurate()
 if __name__ == "__main__":
     main()
     
