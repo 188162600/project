@@ -1,86 +1,6 @@
 
     
-import numpy as np
-import matplotlib.pyplot as plt
-from matplotlib.animation import FuncAnimation
 
-import numpy as np
-import matplotlib.pyplot as plt
-
-# # Define the gravitational acceleration function
-# def gravitational_acceleration(m2, x1, x2, G=6.67430e-11):
-#     r_vec = x2 - x1  # displacement vector from m1 to m2
-#     r = np.linalg.norm(r_vec)  # Euclidean distance between m1 and m2
-#     if r == 0:
-#         raise ValueError("Collision or zero distance between objects.")
-#     return G * m2 / r**3 * r_vec  # Gravitational acceleration vector
-
-import numpy as np
-
-def escape_velocity(mass, radius,G):
- 
-    return np.sqrt(2 * G * mass / radius)
-def kinetic_energy(m, v):
-    """
-    Calculate the kinetic energy of an object.
-
-    Parameters:
-    m (float): Mass of the object (in kilograms).
-    v (float): Velocity of the object (in meters per second).
-
-    Returns:
-    float: Kinetic energy of the object.
-    """
-    return 0.5 * m * v**2
-def potential_energy(m1, m2, r, G):
-    """
-    Calculate the gravitational potential energy between two objects.
-
-    Parameters:
-    m1 (float): Mass of the first object (in kilograms).
-    m2 (float): Mass of the second object (in kilograms).
-    r (float): Distance between the two objects (in meters).
-    G (float): Gravitational constant (in m^3 kg^-1 s^-2).
-
-    Returns:
-    float: Gravitational potential energy between the two objects.
-    """
-    return -G * m1 * m2 / r
-
-
-def gravitational_acceleration(m2, x1, x2, G=6.67430e-11):
-    r_vec = x2 - x1  # displacement vector pointing from x1 to x2
-    r = np.linalg.norm(r_vec)  # Euclidean distance between the two positions
-    if r == 0:
-        raise ValueError("Collision or zero distance between objects.")
-    return G * m2 / r**3 * r_vec  # Gravitational acceleration vector pointing toward the other mass
-
-# Define the Verlet step for gravity
-def verlet_step_gravity(x, v, m_others, x_others, dt, G):
-    a = np.sum([gravitational_acceleration(m_other, x, x_other, G) for x_other, m_other in zip(x_others, m_others)], axis=0)
-    # print(a)
-    x_new = x + v * dt + 0.5 * a * dt**2
-    a_new = np.sum([gravitational_acceleration(m_other, x_new, x_other, G) for x_other, m_other in zip(x_others, m_others)], axis=0)
-    v_new = v + 0.5 * (a + a_new) * dt
-    return x_new, v_new
-
-# Define the update function for all objects
-def verlet_update_all(x, v, m, dt, G, update=True):
-    n_objects = x.shape[0]
-  
-    if isinstance(update, bool):
-        update = [update] * n_objects
-    if isinstance(dt, (int, float)):
-        dt = [dt] * n_objects
-    
-    x_new = np.copy(x)
-    v_new = np.copy(v)
-    for i in range(n_objects):
-        x_others = np.vstack([x[j] for j in range(n_objects) if j != i])
-        m_others = np.array([m[j] for j in range(n_objects) if j != i])
-        if update[i]:
-            x_new[i], v_new[i] = verlet_step_gravity(x[i], v[i], m_others, x_others, dt[i], G)
-    x[:], v[:] = x_new, v_new
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -91,7 +11,7 @@ import multiprocessing
 import copy
 from datetime import timezone
 import itertools
-
+from core1 import * 
 
 import datetime
 
@@ -101,17 +21,23 @@ try:
 except ImportError:
     import pip
     pip.main(['install', 'skyfield'])
-# Load data
-
-#We will use this to fetch 20 points one for each year
 
 def get(t: datetime.datetime):
-    # Load planetary data
+    """_summary_
+
+    Args:
+        t (datetime.datetime): datetime object
+
+    Returns:
+        tuple: tuple containing:
+            - numpy.array: 3D array containing the positions of the Earth and Moon relative to the Sun
+            - numpy.array: 3D array containing the velocities of the Earth and Moon relative to the Sun
+    """
     planets = load('de421.bsp')
     
     # Convert the provided datetime to a Skyfield time object
     ts = load.timescale()
-    datet=t
+   
     t = ts.from_datetime(t)
     
     # Get the celestial bodies
@@ -123,8 +49,8 @@ def get(t: datetime.datetime):
     earth_position = earth.at(t)
     moon_position = moon.at(t)
     sun_position = sun.at(t)
-    # earth.mass
-    # Calculate position relative to the Sun
+   
+    # Calculate positions relative to the Sun
     pos_earth_rel_sun = earth_position.position.m - sun_position.position.m
     pos_moon_rel_sun = moon_position.position.m - sun_position.position.m
 
@@ -132,17 +58,11 @@ def get(t: datetime.datetime):
     vel_earth_rel_sun = earth_position.velocity.m_per_s - sun_position.velocity.m_per_s
     vel_moon_rel_sun = moon_position.velocity.m_per_s - sun_position.velocity.m_per_s
 
-    # Print positions and velocities
-    # print("Position of Earth relative to Sun (AU):", pos_earth_rel_sun)
-    # print("Position of Moon relative to Sun (AU):", pos_moon_rel_sun)
-    # print("Velocity of Earth relative to Sun (AU/day):", vel_earth_rel_sun)
-    # print("Velocity of Moon relative to Sun (AU/day):", vel_moon_rel_sun)
-    # print(f"{datet}:{np.array([[0,0,0],pos_earth_rel_sun, pos_moon_rel_sun]), np.array([[0,0,0],vel_earth_rel_sun, vel_moon_rel_sun])},")
     
     return np.array([[0,0,0],pos_earth_rel_sun, pos_moon_rel_sun]), np.array([[0,0,0],vel_earth_rel_sun, vel_moon_rel_sun])
 
 
-
+# Correct eclipse data from 2010 to 2035
 correct_eclipses  = [
     (datetime.datetime(2010, 1, 15, tzinfo=timezone.utc), "Annular"),
     (datetime.datetime(2010, 7, 11, tzinfo=timezone.utc), "Total"),
@@ -237,72 +157,19 @@ def project_to_plane(p1, p2, p3):
     # Project each point to the plane
     return (project_point(p1), project_point(p2), project_point(p3))
 
-def does_line_intersect_circle(r, center, point, direction):
-    # Define the components of the center, point, and direction
-    h, k = center
-    x0, y0 = point
-    dx, dy = direction
-
-    # Compute the coefficients of the quadratic equation (At^2 + Bt + C = 0)
-    A = dx**2 + dy**2
-    B = 2 * (dx * (x0 - h) + dy * (y0 - k))
-    C = (x0 - h)**2 + (y0 - k)**2 - r**2
-
-    # Calculate the discriminant to determine the nature of the roots
-    discriminant = B**2 - 4 * A * C
-
-    # If the discriminant is negative, there are no real roots, and the line does not intersect the circle
-    if discriminant < 0:
-        return False
-    else:
-        return True
-def get_intersection(p1, direction1, p2, direction2):
-    # Unpack points and direction vectors
-    x1, y1 = p1
-    dx1, dy1 = direction1
-    x2, y2 = p2
-    dx2, dy2 = direction2
-
-    # Check if the direction vectors are parallel (cross product is zero)
-    if dx1 * dy2 == dy1 * dx2:
-        return None  # No intersection (parallel lines)
-
-    # Solve the system of equations:
-    # x1 + t*dx1 = x2 + s*dx2
-    # y1 + t*dy1 = y2 + s*dy2
-    # Using matrix representation: A * [t; s] = B
-    # Where A = [[dx1, -dx2], [dy1, -dy2]] and B = [x2 - x1, y2 - y1]
-    # The solution for t is given by t = det(B, A_col2) / det(A)
-    det_A = dx1 * -dy2 - (-dx2) * dy1
-    det_t = (x2 - x1) * -dy2 - (y2 - y1) * -dx2
-    t = det_t / det_A
-
-    # Calculate the intersection point using t
-    intersection_x = x1 + t * dx1
-    intersection_y = y1 + t * dy1
-
-    return (intersection_x, intersection_y)
-def line_intersection(p1, direction1, p2, direction2):
-    """Finds the intersection point of two lines given by points and direction vectors."""
-    A = np.array([direction1, -direction2]).T
-    b = np.array(p2) - np.array(p1)
-    try:
-        t, s = np.linalg.solve(A, b)
-        return np.array(p1) + t * np.array(direction1)
-    except np.linalg.LinAlgError:
-        return None  # Lines are parallel
-
-def line_intersection(p1, d1, p2, d2):
-    """Calculate the intersection of two lines given by points and direction vectors."""
-    A = np.array([d1, -d2]).T
-    if np.linalg.det(A) == 0:
-        return None  # Lines are parallel
-    b = np.array(p2) - np.array(p1)
-    t = np.linalg.solve(A, b)
-    return np.array(p1) + t[0] * d1
-
 
 def does_line_intersect_before_circle(r, center, p1, direction1, p2, direction2):
+    """
+    Determines if a line intersects a circle before reaching the circle's boundary.
+
+    Args:
+        r : Radius of the circle.
+        center : Coordinates of the center of the circle.
+        p1 : Coordinates of a point on the line.
+        direction1 : Direction vector of the line.
+        p2 : Coordinates of a point on the line.
+        direction2 : Direction vector of the line.
+    """
     def line_intersection(p1, d1, p2, d2):
         # Convert points and directions into numpy arrays for vectorized computation
         p1, d1, p2, d2 = map(np.array, (p1, d1, p2, d2))
@@ -355,7 +222,21 @@ def does_line_intersect_before_circle(r, center, p1, direction1, p2, direction2)
             return False
 
     return True
+
 def does_line_intersect_half_circle(r, center, norm, point, direction):
+    """
+    Determines if a line intersects a half-circle.
+
+    Args:
+        r (float): Radius of the half-circle.
+        center (numpy.array): Coordinates of the center of the half-circle.
+        norm (numpy.array): Normal vector to the half-circle.
+        point (numpy.array): Coordinates of a point on the line.
+        direction (numpy.array): Direction vector of the line.
+
+    Returns:
+        _type_: _description_
+    """
     # Extract components for clarity
     h, k = center
     px, py = point
@@ -423,22 +304,36 @@ def is_solar_eclipse_aligned(sun_pos, moon_pos, earth_pos, ep=None):
     return moon_is_closer_to_sun and np.isclose(angle_cosine, -1, atol=ep) ,abs(angle_cosine-(-1))
 
 def is_solar_eclipse(sun_pos, moon_pos, earth_pos, sun_radius, moon_radius, earth_radius,ep=None,ep_hybrid=None):
-  
+    """
+    Determines the type of solar eclipse based on the positions of the Sun, Moon, and Earth.
+
+    Args:
+        sun_pos : Position vector of the Sun.
+        moon_pos : Position vector of the Moon.
+        earth_pos: Position vector of the Earth.
+        sun_radius: Radius of the Sun.
+        moon_radius : Radius of the Moon.
+        earth_radius : Radius of the Earth.
+        ep : _description_. Defaults to None.
+      
+
+    Returns:
+        _type_: _description_
+    """
+    # Check if the Sun, Moon, and Earth are aligned
     align,gap=is_solar_eclipse_aligned(sun_pos, moon_pos, earth_pos,ep)
     if not align:
-    # if not is_solar_eclipse_aligned(sun_pos, moon_pos, earth_pos,ep):
+  
         return False, "none",None
     
+    # Project the Sun, Moon, and Earth onto a plane
     sun_pos,moon_pos,earth_pos=project_to_plane(sun_pos,moon_pos,earth_pos)
     
     sun_to_moon = moon_pos - sun_pos
     sun_to_earth = earth_pos - sun_pos
     earth_to_sun = sun_pos - earth_pos
    
-     
-    # if np.linalg.norm(sun_to_earth) <np.linalg.norm(sun_to_moon):
-    #     return False, "none"
-                                                                                                                                                                                                         
+                                                                                                                                       
 
 
     sun_top = sun_pos +np.array( [0,1])* sun_radius
@@ -446,13 +341,13 @@ def is_solar_eclipse(sun_pos, moon_pos, earth_pos, sun_radius, moon_radius, eart
     moon_top = moon_pos +np.array( [0,1])* moon_radius
     moon_bot = moon_pos -np.array( [0,1])* moon_radius
     
-
+    # Calculate the positions of the penumbra and umbra
     penumbra_top_start = sun_top
     penumbra_top_direction = moon_bot - sun_top
     penumbra_bot_start = sun_bot
     penumbra_bot_direction = moon_top - sun_bot
 
-   
+    # Check if the penumbra is intersecting the Earth
     is_penumbra_top_in_earth = does_line_intersect_half_circle(earth_radius, earth_pos, earth_to_sun,penumbra_top_start, penumbra_top_direction)
     is_penumbra_bot_in_earth = does_line_intersect_half_circle(earth_radius, earth_pos,earth_to_sun, penumbra_bot_start, penumbra_bot_direction)
 
@@ -461,25 +356,19 @@ def is_solar_eclipse(sun_pos, moon_pos, earth_pos, sun_radius, moon_radius, eart
     umbra_bot_start = sun_bot
     umbra_bot_direction = moon_bot - sun_bot
     
-  
+    # Check if the umbra is intersecting the Earth
     is_umbra_top_in_earth = does_line_intersect_half_circle(earth_radius, earth_pos,earth_to_sun,umbra_top_start, umbra_top_direction)
     is_umbra_bot_in_earth = does_line_intersect_half_circle(earth_radius, earth_pos,earth_to_sun,umbra_bot_start, umbra_bot_direction)
     
     is_partial_eclipse = is_penumbra_top_in_earth or is_penumbra_bot_in_earth 
-    # is_annular_eclipse = is_penumbra_top_in_earth and is_penumbra_bot_in_earth
+   
     is_total_or_annular = is_umbra_top_in_earth or is_umbra_bot_in_earth
-    # if is_total_or_annular and is_partial_eclipse:
-    #     return True, "Hybrid", gap
+   
     if is_total_or_annular:
-        # if is_partial_eclipse:
-        #     return True, "Hybrid", gap
-       
-        # line_intersect_before_half_circle=np.linalg.norm(line_intersection-earth_pos)<earth_radius  and np.linalg.norm(line_intersection-sun_pos)<np.linalg.norm(sun_to_earth)
         
+        # Check if the umbra is intersecting itself before the Earth
         line_intersect_before_half_circle=does_line_intersect_before_circle(earth_radius, earth_pos,umbra_top_start, umbra_top_direction, umbra_bot_start, umbra_bot_direction)
-        # line_intersect_after_half_circle= does_line_intersect_before_circle(earth_radius, earth_pos,umbra_top_start, -umbra_top_direction, umbra_bot_start, -umbra_bot_direction)
-        # if line_intersect_before_half_circle and line_intersect_after_half_circle:
-        #     return True, "Hybrid", gap
+      
         return  True, "Annular" if line_intersect_before_half_circle else "Total", gap
     
    
@@ -488,8 +377,18 @@ def is_solar_eclipse(sun_pos, moon_pos, earth_pos, sun_radius, moon_radius, eart
     return False, "None",None
     
     
-    
 def find_closest_eclipse(eclipses, date,days_limit=float("inf")):
+    """
+    Find the closest eclipse to a given date.
+
+    Args:
+        eclipses: List of eclipse tuples.
+        date: Date to compare against.
+        days_limit: Maximum number of days to search for an eclipse.
+
+    Returns:
+        tuple: Closest eclipse tuple.
+    """
     closest_eclipse = None
     closest_distance = float("inf")
     for eclipse in eclipses:
@@ -500,105 +399,11 @@ def find_closest_eclipse(eclipses, date,days_limit=float("inf")):
     return closest_eclipse
 
   
-# def find_all_eclipses(x, v, m, dt, G,r, total_time, start_date):
-#     # print("total_time",total_time,dt)
-#     times = np.arange(0, total_time, dt)
-#     # print(len(times))
-#     # eclipse_types=set()
-#     current_eclipse_time_times=dict()
-#     eclipses=[]
-#     xs=[]
-#     xs_2d=[]
-#     eclipse_start=False
-#     # ep=dt/60000
-#     # print("times",times.__len__())
-#     try:
-#         for current_time in tqdm.tqdm( times):
-#             xs.append(copy.deepcopy(x))
-#             # projected=project_to_plane(x[0],x[1],x[2])
-#             # xs_2d.append(projected[1]-projected[0])
-#             # print((projected[1]-projected[0]).shape)
-
-#             verlet_update_all(x, v, m, dt, G, [True, True,True])
-#             # if not is_solar_eclipse_aligned(x[0], x[2], x[1]):
-#             #     continue
-#             x_sun, x_earth, x_moon = x
-#             result,type,gap=is_solar_eclipse(x_sun, x_moon, x_earth, r[0], r[2], r[1])
-#             # eclipse_types.add(type)
-#             if result:
-#                 eclipse_start = True
-#                 # eclipse_start_time= current_time
-#                 current_eclipse_time_times.update({gap:(type,current_time)})
-#             else:
-#                 if eclipse_start:
-#                     eclipse_start = False
-#                     # print(start_date)
-                
-#                     # if is_solar_eclipse_aligned(x[0], x[2], x[1]):
-#                     # print("gap",gap)
-#                     # current_eclipse_time_times.update({gap:current_time})
-#                     info=min(current_eclipse_time_times.items(), key=lambda x: x[0])[1]
-#                     center_time=info[1]
-#                     eclipse_types=info[0]
-#                     center_time=start_date+datetime.timedelta(seconds=int(center_time))
-#                     eclipses.append((center_time,eclipse_types))
-#                     # eclipse_types=set()
-
-#     except Exception as e:
-#         print(e)
-#         pass
-    return eclipses
-  
-def find_all_eclipses_accurate(x, v, m, dt, G,r, total_time, start_date):
-    # print("total_time",total_time,dt)
-    times = np.arange(0, total_time, dt)
-    # print(len(times))
-    # eclipse_types=set()
-    current_eclipse_time_times=dict()
-    eclipses=[]
- 
-    eclipse_start=False
-    # ep=dt/60000
-    # print("times",times.__len__())
-    try:
-        for current_time in tqdm.tqdm( times):
-            
-            # projected=project_to_plane(x[0],x[1],x[2])
-            # xs_2d.append(projected[1]-projected[0])
-            # print((projected[1]-projected[0]).shape)
-            x=get(start_date+datetime.timedelta(seconds=int(current_time)))[0]
-            # verlet_update_all(x, v, m, dt, G, [True, True,True])
-            # if not is_solar_eclipse_aligned(x[0], x[2], x[1]):
-            #     continue
-            x_sun, x_earth, x_moon = x
-            result,type,gap=is_solar_eclipse(x_sun, x_moon, x_earth, r[0], r[2], r[1])
-            # eclipse_types.add(type)
-            if result:
-                eclipse_start = True
-                # eclipse_start_time= current_time
-                current_eclipse_time_times.update({gap:(type,current_time)})
-            else:
-                if eclipse_start:
-                    eclipse_start = False
-                    # print(start_date)
-                
-                    # if is_solar_eclipse_aligned(x[0], x[2], x[1]):
-                    # print("gap",gap)
-                    # current_eclipse_time_times.update({gap:current_time})
-                    info=min(current_eclipse_time_times.items(), key=lambda x: x[0])[1]
-                    center_time=info[1]
-                    eclipse_types=info[0]
-                    center_time=start_date+datetime.timedelta(seconds=int(center_time))
-                    eclipses.append((center_time,eclipse_types))
-                    # eclipse_types=set()
-
-    except Exception as e:
-        print(e)
-        pass
-    return eclipses
-
   
 def find_all_eclipses_speed(x, v, m, dt, G,r, total_time, start_date):
+    """ 
+    Find all eclipses that occur during the simulation.
+    """
     # print("total_time",total_time,dt)
     times = np.arange(0, total_time, dt)
     # print(len(times))
@@ -607,79 +412,49 @@ def find_all_eclipses_speed(x, v, m, dt, G,r, total_time, start_date):
     eclipses=[]
  
     eclipse_start=False
-    # ep=dt/60000
-    # print("times",times.__len__())
+    
     try:
         for current_time in times:
             
-            # projected=project_to_plane(x[0],x[1],x[2])
-            # xs_2d.append(projected[1]-projected[0])
-            # print((projected[1]-projected[0]).shape)
-            
+            #update positions
             verlet_update_all(x, v, m, dt, G, [True, True,True])
-            # if not is_solar_eclipse_aligned(x[0], x[2], x[1]):
-            #     continue
+           
             x_sun, x_earth, x_moon = x
             result,type,gap=is_solar_eclipse(x_sun, x_moon, x_earth, r[0], r[2], r[1])
-            # eclipse_types.add(type)
+           
             if result:
                 eclipse_start = True
-                # eclipse_start_time= current_time
+              
                 current_eclipse_time_times.update({gap:(type,current_time)})
             else:
                 if eclipse_start:
                     eclipse_start = False
-                    # print(start_date)
-                
-                    # if is_solar_eclipse_aligned(x[0], x[2], x[1]):
-                    # print("gap",gap)
-                    # current_eclipse_time_times.update({gap:current_time})
+                     
+                    # Find most aligned eclipse
                     info=min(current_eclipse_time_times.items(), key=lambda x: x[0])[1]
                     center_time=info[1]
                     eclipse_types=info[0]
                     center_time=start_date+datetime.timedelta(seconds=int(center_time))
                     eclipses.append((center_time,eclipse_types))
-                    # eclipse_types=set()
+                  
 
     except Exception as e:
         print(e)
         pass
     return eclipses
+
+
 def find_all_eclipses_speed_args(args):
     return find_all_eclipses_speed(*args)
-def find_all_eclipses_accurate_args(args):
-    return find_all_eclipses_accurate(*args)
-# def find_all_eclipses2(args):
-#     x, v, m, dt, G,r, total_time,start_date=args
-#     # print("total_time",total_time)
-#     return find_all_eclipses(x, v, m, dt, G,r, total_time, start_date)
 
 
 def split_array(times, n):
+    """
+    Split an array into n equal parts.
+    """
     k, m = divmod(len(times), n)
     return (times[i*k+min(i, m):(i+1)*k+min(i+1, m)] for i in range(n))
 
-def separate_orbit(x, v, m, dt, G,  start_date, total_time,n):
-    xs = [x.copy()]
-    vs=[v.copy()]
-    times=np.arange(0, total_time, dt)
-    times=list(split_array(times,n))
-    # print(times)
-    # print(total_time//n//dt)
-    dates=[start_date]
-    
-    for time in tqdm.tqdm( times,desc="Splitting"):
-        for current_time in tqdm.tqdm( time,desc="Generating"):
-            verlet_update_all(x, v, m, dt, G, [True, True,True])
-        
-        dates.append(start_date+datetime.timedelta(seconds=int(current_time)))
-        xs.append(x.copy())
-        vs.append(v.copy())
-    del xs[-1]
-    del vs[-1]
-   
-    return xs,vs,int(total_time//n)
-
 
 
         
@@ -687,12 +462,11 @@ def separate_orbit(x, v, m, dt, G,  start_date, total_time,n):
 
         
         
-    
-
-
     
 def print_eclipses(eclipses,correct_eclipses,start_date,total_time):
-    # print(correct_eclipses)
+    """
+    Plot the differences in days between the correct and found eclipses.
+    """
     diffs=[]
     unmatched_eclipses = set(correct_eclipses)
     for eclipse_time, eclipse_type in eclipses:
@@ -736,7 +510,7 @@ def main_speed():
     times=np.arange(0,total_time,dt)
     spited_times=list(split_array(times,splits))
     date=[start_date+datetime.timedelta(seconds=int(spited_times[i][0])) for i in range(splits)]
-    # print(date)
+    
     secs_per_worker=[total_time//splits for i in range(splits)]
 
     xs=[]
@@ -747,75 +521,25 @@ def main_speed():
         
     
   
-    # print(secs_per_year,date)
    
     args=[(xs[i],vs[i],m,dt,G,r,secs_per_worker[i],date[i]) for i in range(splits)]
 
     pool = multiprocessing.Pool(processes=workers)
-    # find_all_eclipses()
-    # Map `square_number` to the numbers
+  
     results = pool.map(find_all_eclipses_speed_args, args)
 
     pool.close()
     pool.join()
     print("Eclipses Found")
-    # print(results)
-    results=list(itertools.chain(*results))
-    # print(results)
-    print_eclipses(results,correct_eclipses,start_date,total_time)
-    # while threading.active_count()>1:
-    #     pass
-    # print("Eclipses Found")
-    # print_eclipses(eclipses,correct_eclipses,start_date,total_time)
-def main_accurate():
-    m = np.array([1.9885e30, 5.97237e24, 7.342e22])
-
-    r = np.array([696340e3, 6371e3, 1737.4e3])
-    dt=600
-
     
-    # dt=60
-    G=6.67430e-11
-   
-   
-    start_date=datetime.datetime(2010, 6, 21, 0, 0, 0, tzinfo=ZoneInfo("UTC"))
-    workers=multiprocessing.cpu_count()
-    splits=20
-    total_time=3600*24*365*15
-    times=np.arange(0,total_time,dt)
-    spited_times=list(split_array(times,splits))
-    date=[start_date+datetime.timedelta(seconds=int(spited_times[i][0])) for i in range(splits)]
-    # print(date)
-    secs_per_worker=[total_time//splits for i in range(splits)]
-
-    xs=[]
-    vs=[]
-    for i in range(splits):
-        xs.append(get(start_date+datetime.timedelta(seconds=int( spited_times[i][0])))[0])
-        vs.append(get(start_date+datetime.timedelta(seconds= int(spited_times[i][0])))[1])
-        
-    
-  
-    # print(secs_per_year,date)
-   
-    args=[(xs[i],vs[i],m,dt,G,r,secs_per_worker[i],date[i]) for i in range(splits)]
-
-    pool = multiprocessing.Pool(processes=workers)
-    # find_all_eclipses()
-    # Map `square_number` to the numbers
-    results = pool.map(find_all_eclipses_accurate_args, args)
-
-    pool.close()
-    pool.join()
-    print("Eclipses Found")
-  
     results=list(itertools.chain(*results))
-  
+   
     print_eclipses(results,correct_eclipses,start_date,total_time)
    
+
 def main():
     main_speed()
-#     main_accurate()
+
 if __name__ == "__main__":
     main()
     
