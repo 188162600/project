@@ -1,6 +1,89 @@
+
+    
 import numpy as np
 import matplotlib.pyplot as plt
-from core1 import verlet_update_all
+from matplotlib.animation import FuncAnimation
+
+import numpy as np
+import matplotlib.pyplot as plt
+
+# # Define the gravitational acceleration function
+# def gravitational_acceleration(m2, x1, x2, G=6.67430e-11):
+#     r_vec = x2 - x1  # displacement vector from m1 to m2
+#     r = np.linalg.norm(r_vec)  # Euclidean distance between m1 and m2
+#     if r == 0:
+#         raise ValueError("Collision or zero distance between objects.")
+#     return G * m2 / r**3 * r_vec  # Gravitational acceleration vector
+
+import numpy as np
+
+def escape_velocity(mass, radius,G):
+ 
+    return np.sqrt(2 * G * mass / radius)
+def kinetic_energy(m, v):
+    """
+    Calculate the kinetic energy of an object.
+
+    Parameters:
+    m (float): Mass of the object (in kilograms).
+    v (float): Velocity of the object (in meters per second).
+
+    Returns:
+    float: Kinetic energy of the object.
+    """
+    return 0.5 * m * v**2
+def potential_energy(m1, m2, r, G):
+    """
+    Calculate the gravitational potential energy between two objects.
+
+    Parameters:
+    m1 (float): Mass of the first object (in kilograms).
+    m2 (float): Mass of the second object (in kilograms).
+    r (float): Distance between the two objects (in meters).
+    G (float): Gravitational constant (in m^3 kg^-1 s^-2).
+
+    Returns:
+    float: Gravitational potential energy between the two objects.
+    """
+    return -G * m1 * m2 / r
+
+
+def gravitational_acceleration(m2, x1, x2, G=6.67430e-11):
+    r_vec = x2 - x1  # displacement vector pointing from x1 to x2
+    r = np.linalg.norm(r_vec)  # Euclidean distance between the two positions
+    if r == 0:
+        raise ValueError("Collision or zero distance between objects.")
+    return G * m2 / r**3 * r_vec  # Gravitational acceleration vector pointing toward the other mass
+
+# Define the Verlet step for gravity
+def verlet_step_gravity(x, v, m_others, x_others, dt, G):
+    a = np.sum([gravitational_acceleration(m_other, x, x_other, G) for x_other, m_other in zip(x_others, m_others)], axis=0)
+    # print(a)
+    x_new = x + v * dt + 0.5 * a * dt**2
+    a_new = np.sum([gravitational_acceleration(m_other, x_new, x_other, G) for x_other, m_other in zip(x_others, m_others)], axis=0)
+    v_new = v + 0.5 * (a + a_new) * dt
+    return x_new, v_new
+
+# Define the update function for all objects
+def verlet_update_all(x, v, m, dt, G, update=True):
+    n_objects = x.shape[0]
+  
+    if isinstance(update, bool):
+        update = [update] * n_objects
+    if isinstance(dt, (int, float)):
+        dt = [dt] * n_objects
+    
+    x_new = np.copy(x)
+    v_new = np.copy(v)
+    for i in range(n_objects):
+        x_others = np.vstack([x[j] for j in range(n_objects) if j != i])
+        m_others = np.array([m[j] for j in range(n_objects) if j != i])
+        if update[i]:
+            x_new[i], v_new[i] = verlet_step_gravity(x[i], v[i], m_others, x_others, dt[i], G)
+    x[:], v[:] = x_new, v_new
+import numpy as np
+import matplotlib.pyplot as plt
+
 import tqdm
 import datetime
 import threading
@@ -527,7 +610,7 @@ def find_all_eclipses_speed(x, v, m, dt, G,r, total_time, start_date):
     # ep=dt/60000
     # print("times",times.__len__())
     try:
-        for current_time in tqdm.tqdm( times):
+        for current_time in times:
             
             # projected=project_to_plane(x[0],x[1],x[2])
             # xs_2d.append(projected[1]-projected[0])
@@ -732,7 +815,7 @@ def main_accurate():
    
 def main():
     main_speed()
-    # main_accurate()
+#     main_accurate()
 if __name__ == "__main__":
     main()
     
